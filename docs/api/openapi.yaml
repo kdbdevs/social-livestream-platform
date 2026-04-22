@@ -1,0 +1,103 @@
+openapi: 3.1.0
+info:
+  title: Social Livestream Platform API
+  version: 1.0.0
+  description: >
+    Starter OpenAPI document derived from prd.md. The implemented focus in this
+    bootstrap is Core Platform and minimal media lifecycle hooks.
+servers:
+  - url: http://localhost:3000/api/v1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  /auth/register:
+    post:
+      summary: Register viewer account
+  /auth/login:
+    post:
+      summary: Login and receive JWT
+  /auth/me:
+    get:
+      summary: Get current user session
+      security:
+        - bearerAuth: []
+  /host-applications:
+    post:
+      summary: Submit host application
+      security:
+        - bearerAuth: []
+  /host-applications/me:
+    get:
+      summary: Get current user host application
+      security:
+        - bearerAuth: []
+  /admin/host-applications:
+    get:
+      summary: List host applications
+      security:
+        - bearerAuth: []
+  /admin/host-applications/{id}/approve:
+    post:
+      summary: Approve host application
+      security:
+        - bearerAuth: []
+  /admin/host-applications/{id}/reject:
+    post:
+      summary: Reject host application
+      security:
+        - bearerAuth: []
+  /rooms:
+    post:
+      summary: Create room in draft state
+      security:
+        - bearerAuth: []
+  /rooms/my:
+    get:
+      summary: List host rooms
+      security:
+        - bearerAuth: []
+  /rooms/live:
+    get:
+      summary: List published and live rooms
+  /rooms/{id}:
+    get:
+      summary: Get room detail
+    patch:
+      summary: Update room metadata while draft
+      security:
+        - bearerAuth: []
+  /rooms/{id}/publish:
+    post:
+      summary: Move room to published state
+      security:
+        - bearerAuth: []
+  /rooms/{id}/end:
+    post:
+      summary: End room
+      security:
+        - bearerAuth: []
+  /admin/rooms/{id}/force-end:
+    post:
+      summary: Force-end room as admin
+      security:
+        - bearerAuth: []
+  /host/broadcast/config:
+    get:
+      summary: Get ingest and playback configuration
+      security:
+        - bearerAuth: []
+  /host/broadcast/preflight:
+    post:
+      summary: Validate room is ready for broadcast start
+      security:
+        - bearerAuth: []
+  /hosts/me/live-summary/{roomId}:
+    get:
+      summary: Get live summary for host room
+      security:
+        - bearerAuth: []
+

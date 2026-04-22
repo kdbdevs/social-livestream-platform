@@ -1,0 +1,613 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  VIEWER
+  HOST
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum HostApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RoomStatus {
+  DRAFT
+  PUBLISHED
+  LIVE
+  ENDED
+  ARCHIVED
+}
+
+enum CurrencyType {
+  COIN
+  DIAMOND
+}
+
+enum WalletLedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum WalletLedgerReferenceType {
+  TOPUP
+  GIFT_SEND
+  GIFT_RECEIVE
+  WITHDRAWAL
+  ADJUSTMENT
+  REFUND
+  WITHDRAWAL_REFUND
+  WITHDRAWAL_HOLD
+}
+
+enum GiftAnimationTier {
+  SMALL
+  BIG
+  FULLSCREEN
+}
+
+enum GiftTransactionStatus {
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum FollowStatus {
+  ACTIVE
+  MUTED
+}
+
+enum NotificationChannel {
+  PUSH
+  EMAIL
+  IN_APP
+}
+
+enum ReportTargetType {
+  USER
+  ROOM
+  MESSAGE
+}
+
+enum ReportReasonCode {
+  NUDITY
+  SPAM
+  HARASSMENT
+  FRAUD
+  UNDERAGE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationActionType {
+  MUTE
+  KICK
+  SUSPEND
+  BAN
+  FORCE_END_ROOM
+  CHAT_DISABLE
+  BALANCE_HOLD
+}
+
+enum PaymentProvider {
+  SANDBOX
+  MANUAL
+  XENDIT
+  MIDTRANS
+  STRIPE
+}
+
+enum PaymentOrderStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentCallbackStatus {
+  RECEIVED
+  PROCESSED
+  REJECTED
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PROCESSING
+  PAID
+  FAILED
+  CANCELED
+}
+
+enum DestinationMethodType {
+  BANK_TRANSFER
+  EWALLET
+  MANUAL
+}
+
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+  PROVIDER
+}
+
+enum AuditEntityType {
+  USER
+  HOST_APPLICATION
+  ROOM
+  WALLET
+  WALLET_LEDGER
+  GIFT_TRANSACTION
+  REPORT
+  MODERATION_ACTION
+  PAYMENT_ORDER
+  WITHDRAWAL_REQUEST
+  NOTIFICATION
+  SYSTEM_CONFIG
+}
+
+model User {
+  id                            String                 @id @default(uuid()) @db.Uuid
+  email                         String                 @unique @db.Citext
+  username                      String?                @unique @db.Citext
+  passwordHash                  String
+  role                          UserRole               @default(VIEWER)
+  status                        UserStatus             @default(ACTIVE)
+  avatarUrl                     String?
+  bio                           String?
+  countryCode                   String?                @db.VarChar(2)
+  tokenVersion                  Int                    @default(0)
+  lastLoginAt                   DateTime?
+  createdAt                     DateTime               @default(now())
+  updatedAt                     DateTime               @updatedAt
+  hostApplication               HostApplication?
+  rooms                         Room[]                 @relation("RoomHost")
+  wallets                       Wallet[]
+  sentGiftTransactions          GiftTransaction[]      @relation("GiftSender")
+  receivedGiftTransactions      GiftTransaction[]      @relation("GiftReceiver")
+  followsGiven                  HostFollow[]           @relation("FollowViewer")
+  followsReceived               HostFollow[]           @relation("FollowHost")
+  notificationPreference        NotificationPreference?
+  chatMessages                  ChatMessage[]
+  directConversationsAsFirst    DirectConversation[]   @relation("DirectConversationFirstParticipant")
+  directConversationsAsSecond   DirectConversation[]   @relation("DirectConversationSecondParticipant")
+  directMessagesSent            DirectMessage[]        @relation("DirectMessageSender")
+  reportsSubmitted              Report[]               @relation("ReportReporter")
+  reportsOnUser                 Report[]               @relation("ReportTargetUser")
+  moderationActionsOnUser       ModerationAction[]     @relation("ModerationTargetUser")
+  moderationActionsByAdmin      ModerationAction[]     @relation("ModerationActorAdmin")
+  paymentOrders                 PaymentOrder[]
+  withdrawalRequests            WithdrawalRequest[]    @relation("WithdrawalHost")
+  auditLogsAsActor              AuditLog[]             @relation("AuditActorUser")
+  reviewedHostApplications      HostApplication[]      @relation("HostApplicationReviewedByAdmin")
+  resolvedReports               Report[]               @relation("ReportResolvedByAdmin")
+  reviewedWithdrawals           WithdrawalRequest[]    @relation("WithdrawalReviewedByAdmin")
+  updatedSystemConfigs          SystemConfig[]
+
+  @@index([role, status])
+  @@index([createdAt])
+}
+
+model HostApplication {
+  id                String                 @id @default(uuid()) @db.Uuid
+  userId            String                 @unique @db.Uuid
+  legalName         String
+  displayName       String
+  countryCode       String                 @db.VarChar(2)
+  status            HostApplicationStatus  @default(PENDING)
+  reviewedByAdminId String?                @db.Uuid
+  reviewedAt        DateTime?
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedByAdmin   User?                  @relation("HostApplicationReviewedByAdmin", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reviewedByAdminId])
+}
+
+model Room {
+  id                String                 @id @default(uuid()) @db.Uuid
+  hostId            String                 @db.Uuid
+  title             String                 @db.VarChar(100)
+  description       String?                @db.VarChar(500)
+  coverImageUrl     String?
+  category          String?
+  status            RoomStatus             @default(DRAFT)
+  streamKey         String                 @unique
+  playbackUrl       String?
+  chatEnabled       Boolean                @default(true)
+  giftEnabled       Boolean                @default(true)
+  forceEnded        Boolean                @default(false)
+  forceEndReason    String?
+  disconnectedAt    DateTime?
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  host              User                   @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  giftTransactions  GiftTransaction[]
+  reports           Report[]               @relation("ReportTargetRoom")
+  moderationActions ModerationAction[]     @relation("ModerationTargetRoom")
+  chatMessages      ChatMessage[]
+  mediaSessions     MediaSession[]
+
+  @@index([hostId, status])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([status, startedAt])
+}
+
+model MediaSession {
+  id                  String    @id @default(uuid()) @db.Uuid
+  roomId              String    @db.Uuid
+  streamKey           String
+  publishStartedAt    DateTime?
+  publishEndedAt      DateTime?
+  disconnectCount     Int       @default(0)
+  lastKnownBitrateKbps Int?
+  lastKnownFps        Int?
+  isActive            Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  room                Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, isActive])
+  @@index([streamKey])
+}
+
+model Wallet {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @db.Uuid
+  currencyType      CurrencyType
+  balanceAvailable  Int          @default(0)
+  balanceLocked     Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries     WalletLedger[]
+
+  @@unique([userId, currencyType])
+  @@index([currencyType, balanceAvailable])
+}
+
+model WalletLedger {
+  id                            String                   @id @default(uuid()) @db.Uuid
+  walletId                      String                   @db.Uuid
+  direction                     WalletLedgerDirection
+  amount                        Int
+  balanceBefore                 Int
+  balanceAfter                  Int
+  referenceType                 WalletLedgerReferenceType
+  referenceId                   String                   @db.Uuid
+  idempotencyKey                String?
+  metadata                      Json?
+  createdAt                     DateTime                 @default(now())
+  wallet                        Wallet                   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  withdrawalLedgerLinksAsDebit  WithdrawalLedgerLink[]   @relation("WithdrawalDebitLedger")
+  withdrawalLedgerLinksAsCredit WithdrawalLedgerLink[]   @relation("WithdrawalCreditLedger")
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@index([referenceType, referenceId])
+  @@index([idempotencyKey])
+}
+
+model GiftCatalogItem {
+  id                String              @id @default(uuid()) @db.Uuid
+  code              String              @unique
+  name              String
+  iconUrl           String?
+  coinPrice         Int
+  diamondReward     Int
+  animationTier     GiftAnimationTier
+  active            Boolean             @default(true)
+  sortOrder         Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  giftTransactions  GiftTransaction[]
+
+  @@index([active, sortOrder])
+}
+
+model GiftTransaction {
+  id                  String                @id @default(uuid()) @db.Uuid
+  roomId              String                @db.Uuid
+  senderId            String                @db.Uuid
+  receiverId          String                @db.Uuid
+  giftId              String                @db.Uuid
+  quantity            Int
+  totalCoin           Int
+  totalDiamond        Int
+  platformRevenueCoin Int
+  idempotencyKey      String
+  status              GiftTransactionStatus @default(SUCCESS)
+  createdAt           DateTime              @default(now())
+  room                Room                  @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  sender              User                  @relation("GiftSender", fields: [senderId], references: [id], onDelete: Restrict)
+  receiver            User                  @relation("GiftReceiver", fields: [receiverId], references: [id], onDelete: Restrict)
+  gift                GiftCatalogItem       @relation(fields: [giftId], references: [id], onDelete: Restrict)
+
+  @@unique([senderId, idempotencyKey])
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([senderId, createdAt(sort: Desc)])
+  @@index([receiverId, createdAt(sort: Desc)])
+}
+
+model ChatMessage {
+  id                String       @id @default(uuid()) @db.Uuid
+  roomId            String       @db.Uuid
+  senderId          String       @db.Uuid
+  clientMessageId   String?
+  message           String       @db.VarChar(200)
+  isBlocked         Boolean      @default(false)
+  blockedReason     String?
+  createdAt         DateTime     @default(now())
+  room              Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender            User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  reports           Report[]
+
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([senderId, createdAt(sort: Desc)])
+  @@unique([roomId, senderId, clientMessageId])
+}
+
+model DirectConversation {
+  id                     String          @id @default(uuid()) @db.Uuid
+  firstParticipantId     String          @db.Uuid
+  secondParticipantId    String          @db.Uuid
+  firstParticipantReadAt DateTime?
+  secondParticipantReadAt DateTime?
+  lastMessageAt          DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  firstParticipant       User            @relation("DirectConversationFirstParticipant", fields: [firstParticipantId], references: [id], onDelete: Cascade)
+  secondParticipant      User            @relation("DirectConversationSecondParticipant", fields: [secondParticipantId], references: [id], onDelete: Cascade)
+  messages               DirectMessage[]
+
+  @@unique([firstParticipantId, secondParticipantId])
+  @@index([firstParticipantId, updatedAt(sort: Desc)])
+  @@index([secondParticipantId, updatedAt(sort: Desc)])
+  @@index([lastMessageAt(sort: Desc)])
+}
+
+model DirectMessage {
+  id               String             @id @default(uuid()) @db.Uuid
+  conversationId   String             @db.Uuid
+  senderId         String             @db.Uuid
+  message          String             @db.VarChar(1000)
+  createdAt        DateTime           @default(now())
+  conversation     DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender           User               @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId, createdAt(sort: Desc)])
+}
+
+model HostFollow {
+  id                String        @id @default(uuid()) @db.Uuid
+  viewerId          String        @db.Uuid
+  hostId            String        @db.Uuid
+  status            FollowStatus  @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  viewer            User          @relation("FollowViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  host              User          @relation("FollowHost", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerId, hostId])
+  @@index([hostId, status])
+}
+
+model NotificationPreference {
+  id                String              @id @default(uuid()) @db.Uuid
+  userId            String              @unique @db.Uuid
+  hostLive          Boolean             @default(true)
+  paymentSuccess    Boolean             @default(true)
+  withdrawalStatus  Boolean             @default(true)
+  moderationAlerts  Boolean             @default(true)
+  preferredChannel  NotificationChannel @default(PUSH)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id                String          @id @default(uuid()) @db.Uuid
+  reporterId        String          @db.Uuid
+  targetType        ReportTargetType
+  targetUserId      String?         @db.Uuid
+  targetRoomId      String?         @db.Uuid
+  targetMessageId   String?         @db.Uuid
+  reasonCode        ReportReasonCode
+  description       String?
+  status            ReportStatus    @default(OPEN)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  resolvedByAdminId String?         @db.Uuid
+  resolvedAt        DateTime?
+  resolutionNotes   String?
+  reporter          User            @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  targetUser        User?           @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetRoom        Room?           @relation("ReportTargetRoom", fields: [targetRoomId], references: [id], onDelete: SetNull)
+  targetMessage     ChatMessage?    @relation(fields: [targetMessageId], references: [id], onDelete: SetNull)
+  resolvedByAdmin   User?           @relation("ReportResolvedByAdmin", fields: [resolvedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetType, createdAt(sort: Desc)])
+  @@index([targetUserId])
+  @@index([targetRoomId])
+}
+
+model ModerationAction {
+  id                String               @id @default(uuid()) @db.Uuid
+  actionType        ModerationActionType
+  targetUserId      String?              @db.Uuid
+  targetRoomId      String?              @db.Uuid
+  actorAdminId      String?              @db.Uuid
+  reason            String
+  durationSeconds   Int?
+  expiresAt         DateTime?
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  targetUser        User?                @relation("ModerationTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetRoom        Room?                @relation("ModerationTargetRoom", fields: [targetRoomId], references: [id], onDelete: SetNull)
+  actorAdmin        User?                @relation("ModerationActorAdmin", fields: [actorAdminId], references: [id], onDelete: SetNull)
+
+  @@index([actionType, active, createdAt(sort: Desc)])
+  @@index([targetUserId, active])
+  @@index([targetRoomId, active])
+  @@index([expiresAt])
+}
+
+model PaymentPackage {
+  id                String          @id @default(uuid()) @db.Uuid
+  name              String
+  fiatCurrency      String          @db.VarChar(3)
+  fiatAmount        Int
+  coinAmount        Int
+  active            Boolean         @default(true)
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  paymentOrders     PaymentOrder[]
+
+  @@index([active, sortOrder])
+}
+
+model PaymentOrder {
+  id                String               @id @default(uuid()) @db.Uuid
+  userId            String               @db.Uuid
+  packageId         String?              @db.Uuid
+  provider          PaymentProvider
+  providerReference String?
+  fiatCurrency      String               @db.VarChar(3)
+  fiatAmount        Int
+  coinAmount        Int
+  status            PaymentOrderStatus   @default(CREATED)
+  idempotencyKey    String
+  paymentUrl        String?
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  paymentPackage    PaymentPackage?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  callbackEvents    PaymentCallbackEvent[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([provider, providerReference])
+}
+
+model PaymentCallbackEvent {
+  id                String                @id @default(uuid()) @db.Uuid
+  paymentOrderId    String?               @db.Uuid
+  provider          PaymentProvider
+  providerReference String
+  rawPayload        Json
+  signatureValid    Boolean               @default(false)
+  status            PaymentCallbackStatus @default(RECEIVED)
+  processedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  paymentOrder      PaymentOrder?         @relation(fields: [paymentOrderId], references: [id], onDelete: SetNull)
+
+  @@index([provider, providerReference])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model WithdrawalRequest {
+  id                         String                 @id @default(uuid()) @db.Uuid
+  hostUserId                 String                 @db.Uuid
+  diamondAmount              Int
+  cashAmount                 Int
+  conversionRateSnapshot     Int
+  destinationMethodType      DestinationMethodType
+  destinationMaskedDetails   Json
+  destinationEncryptedDetails String?
+  status                     WithdrawalStatus       @default(REQUESTED)
+  holdReason                 String?
+  notes                      String?
+  reviewedByAdminId          String?                @db.Uuid
+  reviewedAt                 DateTime?
+  approvedAt                 DateTime?
+  rejectedAt                 DateTime?
+  processingAt               DateTime?
+  paidAt                     DateTime?
+  failedAt                   DateTime?
+  canceledAt                 DateTime?
+  providerReference          String?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  host                       User                   @relation("WithdrawalHost", fields: [hostUserId], references: [id], onDelete: Restrict)
+  reviewedByAdmin            User?                  @relation("WithdrawalReviewedByAdmin", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  ledgerLinks                WithdrawalLedgerLink[]
+
+  @@index([hostUserId, status, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model WithdrawalLedgerLink {
+  id                  String            @id @default(uuid()) @db.Uuid
+  withdrawalRequestId String            @db.Uuid
+  walletLedgerDebitId String            @db.Uuid
+  walletLedgerCreditId String?          @db.Uuid
+  createdAt           DateTime          @default(now())
+  withdrawalRequest   WithdrawalRequest @relation(fields: [withdrawalRequestId], references: [id], onDelete: Cascade)
+  walletLedgerDebit   WalletLedger      @relation("WithdrawalDebitLedger", fields: [walletLedgerDebitId], references: [id], onDelete: Restrict)
+  walletLedgerCredit  WalletLedger?     @relation("WithdrawalCreditLedger", fields: [walletLedgerCreditId], references: [id], onDelete: SetNull)
+
+  @@unique([withdrawalRequestId, walletLedgerDebitId])
+  @@index([walletLedgerCreditId])
+}
+
+model AuditLog {
+  id          String          @id @default(uuid()) @db.Uuid
+  actorType   AuditActorType
+  actorUserId String?         @db.Uuid
+  actorLabel  String?
+  entityType  AuditEntityType
+  entityId    String          @db.Uuid
+  action      String
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+  actorUser   User?           @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorType, createdAt(sort: Desc)])
+}
+
+model SystemConfig {
+  id              String    @id @default(uuid()) @db.Uuid
+  key             String    @unique
+  value           Json
+  description     String?
+  updatedByUserId String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  updatedByUser   User?     @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+}

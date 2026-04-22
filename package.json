@@ -1,0 +1,26 @@
+{
+  "name": "social-livestream-platform",
+  "description": "Monorepo platform livestream dengan unified web app, admin dashboard, backend services, dan shared packages untuk auth, room lifecycle, media hooks, dan fondasi ekonomi.",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web-app",
+    "apps/web-admin",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:api": "npm run dev -w @social-livestream/api",
+    "dev:media-hooks": "npm run dev -w @social-livestream/media-hooks",
+    "dev:worker": "npm run dev -w @social-livestream/worker",
+    "dev:web-app": "npm run dev -w @social-livestream/web-app",
+    "dev:web-admin": "npm run dev -w @social-livestream/web-admin",
+    "db:generate": "npm run prisma:generate -w @social-livestream/db",
+    "db:seed": "npm run seed -w @social-livestream/db"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

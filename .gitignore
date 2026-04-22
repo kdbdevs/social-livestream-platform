@@ -1,0 +1,16 @@
+node_modules
+assets-frontend
+stitch
+dist
+prd.md
+prd_v1.md
+frontend-web-prd.md
+.turbo
+.env
+.env.local
+.DS_Store
+coverage
+.idea
+.vscode
+*.log
+packages/db/prisma/dev.db

@@ -1,0 +1,26 @@
+{
+  "name": "@social-livestream/media-hooks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "dependencies": {
+    "@prisma/client": "^6.6.0",
+    "@social-livestream/config": "0.1.0",
+    "@social-livestream/db": "0.1.0",
+    "@social-livestream/domain-core": "0.1.0",
+    "fastify": "^5.2.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
+
