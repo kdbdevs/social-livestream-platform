@@ -312,7 +312,8 @@ Repo ini sudah disiapkan dengan:
 
 Catatan:
 
-- output `tsc` repo ini berada di path `dist/services/.../src/main.js`, dan konfigurasi PM2 di repo sudah diarahkan ke path tersebut.
+- service backend production dijalankan lewat `tsx src/main.ts` melalui PM2.
+- build `tsc` tetap berguna untuk validasi, tetapi PM2 tidak bergantung pada file `dist/main.js`.
 
 Jalankan:
 

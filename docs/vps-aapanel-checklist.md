@@ -218,7 +218,8 @@ pm2 startup
 
 Catatan:
 
-- PM2 di repo ini dijalankan memakai `ecosystem.config.cjs`, jadi tidak perlu menebak path file `dist` secara manual.
+- PM2 di repo ini dijalankan memakai `ecosystem.config.cjs`.
+- untuk backend, PM2 mengeksekusi script `start` workspace yang memakai `tsx`, jadi tidak perlu menebak path `dist` manual.
 
 Lihat status:
 

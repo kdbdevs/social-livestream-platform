@@ -3,20 +3,20 @@ module.exports = {
     {
       name: "livestream-api",
       cwd: __dirname,
-      script: "services/api/dist/main.js",
-      interpreter: "node",
+      script: "npm",
+      args: "run start:api",
     },
     {
       name: "livestream-hooks",
       cwd: __dirname,
-      script: "services/media-hooks/dist/main.js",
-      interpreter: "node",
+      script: "npm",
+      args: "run start:media-hooks",
     },
     {
       name: "livestream-worker",
       cwd: __dirname,
-      script: "services/worker/dist/main.js",
-      interpreter: "node",
+      script: "npm",
+      args: "run start:worker",
     },
   ],
 };
