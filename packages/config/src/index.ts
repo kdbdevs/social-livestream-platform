@@ -40,6 +40,7 @@ const envSchema = z.object({
   API_HOST: z.string().default("0.0.0.0"),
   API_PORT: z.coerce.number().int().positive().default(3000),
   API_CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:5175"),
+  API_CORS_ORIGIN_PATTERNS: z.string().default(""),
   MEDIA_HOOKS_PORT: z.coerce.number().int().positive().default(3001),
   WORKER_PORT: z.coerce.number().int().positive().default(3002),
   MEDIA_HOOK_SECRET: z.string().min(16),
