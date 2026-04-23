@@ -98,7 +98,7 @@ mkdir -p /www/wwwroot
 cd /www/wwwroot
 git clone https://github.com/kdbdevs/social-livestream-platform.git
 cd social-livestream-platform
-npm install
+npm install --include=dev
 ```
 
 ## F. Terminal VPS: Siapkan Environment Production
@@ -183,9 +183,14 @@ Alternatif lebih praktis:
 bash deploy.sh
 ```
 
+Catatan:
+
+- `deploy.sh` akan memastikan extension PostgreSQL `citext` aktif otomatis sebelum `db push`.
+
 ## I. Terminal VPS: Build App
 
 ```bash
+npm run db:generate
 npm run build
 ```
 
@@ -210,6 +215,10 @@ pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup
 ```
+
+Catatan:
+
+- PM2 di repo ini dijalankan memakai `ecosystem.config.cjs`, jadi tidak perlu menebak path file `dist` secara manual.
 
 Lihat status:
 
@@ -392,11 +401,12 @@ mkdir -p /www/wwwroot
 cd /www/wwwroot
 git clone https://github.com/kdbdevs/social-livestream-platform.git
 cd social-livestream-platform
-npm install
+npm install --include=dev
 cp .env.vps.example .env
 nano .env
 nano infrastructure/compose/srs.vps.conf
 docker compose -f infrastructure/compose/vps.yml up -d
+npm run db:generate
 npm run build
 npx prisma db push --schema packages/db/prisma/schema.prisma
 npm run db:seed

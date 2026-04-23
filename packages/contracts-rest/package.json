@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/contracts-rest/src/index.js",
-  "types": "dist/contracts-rest/src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/contracts-rest/src/index.js"
+    ".": "./dist/index.js"
   },
   "dependencies": {
     "@social-livestream/shared-types": "0.1.0",

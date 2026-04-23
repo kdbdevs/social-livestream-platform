@@ -10,6 +10,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prebuild": "npm run db:generate",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:api": "npm run dev -w @social-livestream/api",
@@ -25,5 +26,11 @@
   },
   "engines": {
     "node": ">=24.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^3.4.19"
   }
 }

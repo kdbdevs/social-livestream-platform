@@ -15,6 +15,7 @@ services:
       retries: 20
       start_period: 10s
     volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
       - postgres-data:/var/lib/postgresql/data
 
   redis:

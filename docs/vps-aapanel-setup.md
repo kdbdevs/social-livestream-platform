@@ -170,8 +170,13 @@ cd social-livestream-platform
 Install dependency:
 
 ```bash
-npm install
+npm install --include=dev
 ```
+
+Catatan:
+
+- walaupun `NODE_ENV=production`, tahap build tetap butuh dev dependency seperti `vite`, `typescript`, dan `@types/node`.
+- karena itu gunakan `npm install --include=dev`, bukan `npm install` biasa.
 
 ## 6. Siapkan File Environment Production
 
@@ -255,6 +260,7 @@ bash deploy.sh
 Hasil yang diharapkan:
 
 - `postgres`, `redis`, dan `srs` semua `Up`.
+- extension PostgreSQL seperti `citext` tersedia untuk schema Prisma.
 
 ## 8. Build Aplikasi
 
@@ -265,11 +271,13 @@ Tujuan:
 Jalankan:
 
 ```bash
+npm run db:generate
 npm run build
 ```
 
 Hasil yang diharapkan:
 
+- Prisma client dan type backend tergenerate sesuai schema aktif.
 - file `dist` terbentuk untuk package backend.
 - `apps/web-app/dist` terbentuk untuk frontend.
 
@@ -301,6 +309,10 @@ Repo ini sudah disiapkan dengan:
 
 - `ecosystem.config.cjs`
 - script `start` di masing-masing service
+
+Catatan:
+
+- output `tsc` repo ini berada di path `dist/services/.../src/main.js`, dan konfigurasi PM2 di repo sudah diarahkan ke path tersebut.
 
 Jalankan:
 

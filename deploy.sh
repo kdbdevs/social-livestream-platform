@@ -173,8 +173,8 @@ sed "s/CHANGE_ME_MEDIA_HOOK_SECRET/$(escape_sed_replacement "$MEDIA_HOOK_SECRET"
 log "Konfigurasi SRS production sudah dirender ke $GENERATED_SRS"
 
 if [[ "$SKIP_INSTALL" -eq 0 ]]; then
-  log "Menjalankan npm install"
-  npm install
+  log "Menjalankan npm install --include=dev"
+  npm install --include=dev
 else
   log "Melewati npm install"
 fi
@@ -185,6 +185,13 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 
 log "Menunggu PostgreSQL siap"
 wait_for_postgres || fail "PostgreSQL belum siap setelah beberapa percobaan."
+
+log "Memastikan extension PostgreSQL yang dibutuhkan sudah aktif"
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T postgres \
+  psql -U postgres -d livestream -c "CREATE EXTENSION IF NOT EXISTS citext;"
+
+log "Generate Prisma client"
+npm run db:generate
 
 log "Build seluruh workspace"
 npm run build
@@ -230,7 +237,9 @@ Deploy selesai.
 Yang sudah dikerjakan script ini:
 - render config SRS production dari MEDIA_HOOK_SECRET
 - docker compose up untuk postgres, redis, srs
-- npm install
+- npm install --include=dev
+- memastikan extension PostgreSQL seperti citext sudah aktif
+- prisma generate
 - npm run build
 - prisma db push
 - db seed $( [[ "$SKIP_SEED" -eq 0 ]] && printf 'dijalankan' || printf 'dilewati' )
