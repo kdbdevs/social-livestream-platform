@@ -1,7 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import "./tailwind.css";
 import "@social-livestream/ui/base.css";
 import "./styles.css";
 import { App } from "./app.js";

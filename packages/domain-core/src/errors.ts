@@ -6,7 +6,6 @@ export const apiErrorCodeValues = [
   "USER_BANNED",
   "HOST_NOT_APPROVED",
   "ROOM_NOT_FOUND",
-  "CONVERSATION_NOT_FOUND",
   "ROOM_NOT_LIVE",
   "ROOM_NOT_PUBLISHED",
   "ROOM_ALREADY_LIVE",
@@ -44,3 +43,4 @@ export class DomainError extends Error {
 export function isDomainError(value: unknown): value is DomainError {
   return value instanceof DomainError;
 }
+

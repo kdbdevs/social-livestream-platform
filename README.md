@@ -55,10 +55,6 @@ The application processes still run from this repo during local development:
 
 `realtime`, `web-app`, dan `web-admin` belum dimasukkan ke compose saat ini. Arsitektur frontend user-facing di repo ini memakai satu aplikasi user terpadu `apps/web-app` dan satu aplikasi admin terpisah `apps/web-admin`; tidak ada `web-viewer` atau `web-host-panel`.
 
-## Deployment
-
-Panduan deploy production untuk Vercel dan VPS tersedia di `docs/deployment.md`.
-
 ## Important Constraints
 
 * backend is the source of truth

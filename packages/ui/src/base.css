@@ -1,3 +1,8 @@
+@config "../../../tailwind.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   color-scheme: dark;
   --color-background: 247 249 252;
