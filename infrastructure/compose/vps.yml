@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: livestream
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d livestream"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  srs:
+    image: ossrs/srs:5
+    restart: unless-stopped
+    command: ["./objs/srs", "-c", "conf/srs.vps.conf"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "1935:1935"
+      - "127.0.0.1:1985:1985"
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ${SRS_VPS_CONFIG:-./srs.vps.conf}:/usr/local/srs/conf/srs.vps.conf:ro
+
+volumes:
+  postgres-data:

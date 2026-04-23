@@ -17,6 +17,9 @@
     "dev:worker": "npm run dev -w @social-livestream/worker",
     "dev:web-app": "npm run dev -w @social-livestream/web-app",
     "dev:web-admin": "npm run dev -w @social-livestream/web-admin",
+    "start:api": "npm run start -w @social-livestream/api",
+    "start:media-hooks": "npm run start -w @social-livestream/media-hooks",
+    "start:worker": "npm run start -w @social-livestream/worker",
     "db:generate": "npm run prisma:generate -w @social-livestream/db",
     "db:seed": "npm run seed -w @social-livestream/db"
   },

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@social-livestream/db";
 import { DomainError } from "@social-livestream/domain-core";
 
@@ -33,9 +34,11 @@ const directConversationInclude = {
       createdAt: true,
     },
   },
-} as const;
+} satisfies Prisma.DirectConversationInclude;
 
-type DirectConversationRecord = Awaited<ReturnType<typeof fetchDirectConversationRecordForActor>>;
+type DirectConversationRecord = Prisma.DirectConversationGetPayload<{
+  include: typeof directConversationInclude;
+}>;
 
 export async function listDirectConversations(actor: { userId: string }) {
   const conversations = await prisma.directConversation.findMany({
