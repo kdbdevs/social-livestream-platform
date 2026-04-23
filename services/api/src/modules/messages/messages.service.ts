@@ -1,5 +1,6 @@
 import { prisma } from "@social-livestream/db";
 import { DomainError } from "@social-livestream/domain-core";
+import type { Prisma } from "@prisma/client";
 
 const participantSelect = {
   id: true,
@@ -24,7 +25,7 @@ const directConversationInclude = {
     select: participantSelect,
   },
   messages: {
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }] as Prisma.DirectMessageOrderByWithRelationInput[],
     take: 1,
     select: {
       id: true,
@@ -33,9 +34,38 @@ const directConversationInclude = {
       createdAt: true,
     },
   },
-} as const;
+} satisfies Prisma.DirectConversationInclude;
 
-type DirectConversationRecord = Awaited<ReturnType<typeof fetchDirectConversationRecordForActor>>;
+type DirectConversationRecord = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastMessageAt: Date | null;
+  firstParticipantId: string;
+  secondParticipantId: string;
+  firstParticipantReadAt: Date | null;
+  secondParticipantReadAt: Date | null;
+  firstParticipant: {
+    id: string;
+    username: string | null;
+    avatarUrl: string | null;
+    role: "VIEWER" | "HOST" | "ADMIN";
+    bio: string | null;
+  };
+  secondParticipant: {
+    id: string;
+    username: string | null;
+    avatarUrl: string | null;
+    role: "VIEWER" | "HOST" | "ADMIN";
+    bio: string | null;
+  };
+  messages: Array<{
+    id: string;
+    senderId: string;
+    message: string;
+    createdAt: Date;
+  }>;
+};
 
 export async function listDirectConversations(actor: { userId: string }) {
   const conversations = await prisma.directConversation.findMany({
@@ -47,11 +77,13 @@ export async function listDirectConversations(actor: { userId: string }) {
   });
 
   const unreadCounts = await Promise.all(
-    conversations.map((conversation) => countUnreadMessagesForActor(actor.userId, conversation)),
+    conversations.map((conversation: DirectConversationRecord) =>
+      countUnreadMessagesForActor(actor.userId, conversation),
+    ),
   );
 
   return {
-    conversations: conversations.map((conversation, index) =>
+    conversations: conversations.map((conversation: DirectConversationRecord, index: number) =>
       serializeConversationThread(actor.userId, conversation, unreadCounts[index] ?? 0),
     ),
   };
@@ -98,7 +130,7 @@ export async function createOrGetDirectConversation(
   const pair = normalizeConversationPair(actor.userId, input.participantUserId);
   await assertDirectParticipantExists(input.participantUserId);
 
-  const conversationId = await prisma.$transaction(async (tx) => {
+  const conversationId = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const conversation = await tx.directConversation.upsert({
       where: {
         firstParticipantId_secondParticipantId: {
@@ -187,7 +219,7 @@ export async function sendDirectMessage(
   conversationId: string,
   input: { message: string },
 ) {
-  const message = await prisma.$transaction(async (tx) => {
+  const message = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const conversation = await tx.directConversation.findFirst({
       where: {
         id: conversationId,
@@ -283,7 +315,10 @@ async function getDirectConversationThread(actor: { userId: string }, conversati
   return serializeConversationThread(actor.userId, conversation, unreadCount);
 }
 
-async function fetchDirectConversationRecordForActor(actorUserId: string, conversationId: string) {
+async function fetchDirectConversationRecordForActor(
+  actorUserId: string,
+  conversationId: string,
+): Promise<DirectConversationRecord> {
   const conversation = await prisma.directConversation.findFirst({
     where: {
       id: conversationId,
@@ -300,9 +335,10 @@ async function fetchDirectConversationRecordForActor(actorUserId: string, conver
 }
 
 async function countUnreadMessagesForActor(actorUserId: string, conversation: DirectConversationRecord) {
-  const readAt = conversation.firstParticipantId === actorUserId
-    ? conversation.firstParticipantReadAt
-    : conversation.secondParticipantReadAt;
+  const readAt =
+    conversation.firstParticipantId === actorUserId
+      ? conversation.firstParticipantReadAt
+      : conversation.secondParticipantReadAt;
 
   return prisma.directMessage.count({
     where: {
@@ -356,9 +392,10 @@ function normalizeConversationPair(firstUserId: string, secondUserId: string) {
 }
 
 function serializeConversationThread(actorUserId: string, conversation: DirectConversationRecord, unreadCount: number) {
-  const participant = conversation.firstParticipantId === actorUserId
-    ? conversation.secondParticipant
-    : conversation.firstParticipant;
+  const participant =
+    conversation.firstParticipantId === actorUserId
+      ? conversation.secondParticipant
+      : conversation.firstParticipant;
   const lastMessage = conversation.messages[0];
 
   return {
