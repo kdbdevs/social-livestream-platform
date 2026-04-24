@@ -204,6 +204,7 @@ API_PORT=4000
 API_CORS_ORIGIN=https://app.aweekday.site
 VITE_API_BASE_URL=https://api.aweekday.site/api/v1
 MEDIA_HOOKS_PORT=4002
+SRS_HOOKS_BASE_URL=https://hooks.aweekday.site
 WORKER_PORT=4003
 MEDIA_HOOK_SECRET=ISI_DENGAN_RANDOM_STRING_MIN_16
 RTMP_INGEST_URL=rtmp://stream.aweekday.site/live
@@ -215,6 +216,7 @@ POSTGRES_PASSWORD=GANTI_PASSWORD_POSTGRES
 Catatan penting:
 
 - `API_HOST=127.0.0.1` membuat API dan hooks hanya terbuka lokal, lalu diexpose ke publik melalui Nginx.
+- `SRS_HOOKS_BASE_URL=https://hooks.aweekday.site` dipakai oleh `deploy.sh` untuk merender callback SRS production. Untuk topologi aaPanel + Docker infra, callback public HTTPS ini lebih stabil daripada callback langsung ke host internal container.
 - `POSTGRES_PASSWORD` dipakai oleh Docker Compose VPS.
 - password di `DATABASE_URL` dan `POSTGRES_PASSWORD` harus sama.
 
@@ -232,13 +234,18 @@ File yang dipakai:
 
 Jika ingin cara manual, edit `infrastructure/compose/srs.vps.conf` lalu ganti:
 
+- `CHANGE_ME_SRS_HOOKS_BASE_URL`
 - `CHANGE_ME_MEDIA_HOOK_SECRET`
 
-dengan nilai yang sama persis seperti `MEDIA_HOOK_SECRET` di `.env`.
+dengan nilai yang sesuai dari `.env`:
+
+- `CHANGE_ME_SRS_HOOKS_BASE_URL` -> `SRS_HOOKS_BASE_URL`
+- `CHANGE_ME_MEDIA_HOOK_SECRET` -> `MEDIA_HOOK_SECRET`
 
 Tujuannya:
 
 - agar callback `on_publish` dan `on_unpublish` dari SRS diizinkan oleh service `media-hooks` saat `NODE_ENV=production`.
+- agar callback SRS tetap bisa menjangkau `media-hooks` secara stabil dari container Docker di VPS single-host.
 
 Referensi SRS:
 
@@ -419,7 +426,7 @@ Referensi:
 
 Tujuan:
 
-- memberi endpoint publik/terkontrol untuk callback media hooks, walau SRS di arsitektur ini tetap memanggil host lokal langsung.
+- memberi endpoint publik/terkontrol untuk callback media hooks yang dipanggil SRS saat stream mulai dan berakhir.
 
 Langkah di aaPanel:
 
@@ -434,7 +441,7 @@ Langkah di aaPanel:
 
 Catatan:
 
-- pada setup repo ini, file `srs.vps.conf` memanggil `media-hooks` lewat `host.docker.internal:4002`, bukan lewat domain publik, agar callback tidak bergantung pada DNS/SSL eksternal dari container.
+- pada setup production VPS ini, callback SRS diarahkan ke `https://hooks.aweekday.site/...` melalui `SRS_HOOKS_BASE_URL`. Pola ini terbukti lebih stabil pada topologi aaPanel + PM2 + Docker dibanding callback langsung ke host internal container.
 
 ### 12.4 `stream.aweekday.site`
 
@@ -485,11 +492,13 @@ docker logs $(docker ps --filter name=srs --format "{{.ID}}")
 ```bash
 curl http://127.0.0.1:4000/api/v1/rooms/live?limit=1
 curl -X POST "http://127.0.0.1:4002/hooks/srs/on-publish?secret=ISI_SECRET" -H "Content-Type: application/json" -d "{\"streamKey\":\"00000000-0000-0000-0000-000000000000\"}"
+curl -I https://hooks.aweekday.site/
 ```
 
 Catatan:
 
 - request hook di atas kemungkinan akan mengembalikan error business bila `streamKey` tidak ada, tetapi itu sudah cukup untuk membuktikan secret dan routing hooks berfungsi.
+- `curl -I https://hooks.aweekday.site/` wajar mengembalikan `401 Unauthorized`. Itu justru menandakan reverse proxy hooks dan proteksi secret aktif.
 
 ### 13.3 Cek domain publik
 
@@ -523,9 +532,10 @@ Urutan update:
 ## 15. Catatan Risiko Yang Perlu Diketahui
 
 1. Repo production saat ini memakai `prisma db push`, bukan migrasi versioned. Untuk tim dan production yang lebih matang, sebaiknya nanti ditingkatkan ke Prisma migrations.
-2. `hooks.aweekday.site` saat ini tidak wajib dipakai oleh SRS karena callback diarahkan langsung ke host lokal. Domain itu tetap berguna untuk observability atau bila nanti ingin mengganti ke callback berbasis public HTTPS.
+2. `hooks.aweekday.site` sekarang menjadi bagian penting dari callback production SRS. Karena itu reverse proxy dan SSL untuk domain ini harus selesai sebelum menguji OBS.
 3. `stream.aweekday.site` melayani HLS playback via HTTPS, tetapi ingest tetap RTMP biasa di port `1935`.
 4. `apps/web-admin` belum siap production dari repo saat ini, jadi langkah ini hanya men-deploy `apps/web-app`, `api`, `media-hooks`, dan `worker`.
+5. Jika sebuah room sudah pernah live lalu terputus cukup lama, worker akan mengubahnya menjadi `ENDED`. Untuk test OBS ulang, gunakan room baru yang masih `PUBLISHED` atau reset status room tersebut secara manual.
 
 ## Referensi
 

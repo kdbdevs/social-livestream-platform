@@ -158,6 +158,7 @@ require_env DATABASE_URL
 require_env REDIS_URL
 require_env JWT_SECRET
 require_env API_CORS_ORIGIN
+require_env SRS_HOOKS_BASE_URL
 require_env MEDIA_HOOK_SECRET
 require_env RTMP_INGEST_URL
 require_env PLAYBACK_BASE_URL
@@ -166,9 +167,15 @@ require_env POSTGRES_PASSWORD
 [[ "$NODE_ENV" == "production" ]] || fail "NODE_ENV harus 'production' untuk deploy VPS."
 [[ -f "$SRS_TEMPLATE" ]] || fail "Template SRS tidak ditemukan: $SRS_TEMPLATE"
 [[ -f "$COMPOSE_FILE" ]] || fail "Compose file tidak ditemukan: $COMPOSE_FILE"
+[[ "$SRS_HOOKS_BASE_URL" =~ ^https?:// ]] || fail "SRS_HOOKS_BASE_URL harus diawali http:// atau https://."
+
+SRS_HOOKS_BASE_URL="${SRS_HOOKS_BASE_URL%/}"
 
 mkdir -p "$GENERATED_DIR"
-sed "s/CHANGE_ME_MEDIA_HOOK_SECRET/$(escape_sed_replacement "$MEDIA_HOOK_SECRET")/g" "$SRS_TEMPLATE" > "$GENERATED_SRS"
+sed \
+  -e "s/CHANGE_ME_SRS_HOOKS_BASE_URL/$(escape_sed_replacement "$SRS_HOOKS_BASE_URL")/g" \
+  -e "s/CHANGE_ME_MEDIA_HOOK_SECRET/$(escape_sed_replacement "$MEDIA_HOOK_SECRET")/g" \
+  "$SRS_TEMPLATE" > "$GENERATED_SRS"
 
 log "Konfigurasi SRS production sudah dirender ke $GENERATED_SRS"
 
@@ -235,7 +242,7 @@ cat <<EOF
 Deploy selesai.
 
 Yang sudah dikerjakan script ini:
-- render config SRS production dari MEDIA_HOOK_SECRET
+- render config SRS production dari SRS_HOOKS_BASE_URL dan MEDIA_HOOK_SECRET
 - docker compose up untuk postgres, redis, srs
 - npm install --include=dev
 - memastikan extension PostgreSQL seperti citext sudah aktif

@@ -128,6 +128,7 @@ API_PORT=4000
 API_CORS_ORIGIN=https://app.aweekday.site
 VITE_API_BASE_URL=https://api.aweekday.site/api/v1
 MEDIA_HOOKS_PORT=4002
+SRS_HOOKS_BASE_URL=https://hooks.aweekday.site
 WORKER_PORT=4003
 MEDIA_HOOK_SECRET=ISI_RANDOM_STRING_MIN_16
 RTMP_INGEST_URL=rtmp://stream.aweekday.site/live
@@ -151,14 +152,19 @@ nano infrastructure/compose/srs.vps.conf
 Ganti:
 
 ```text
+CHANGE_ME_SRS_HOOKS_BASE_URL
 CHANGE_ME_MEDIA_HOOK_SECRET
 ```
 
-dengan nilai yang sama persis seperti `MEDIA_HOOK_SECRET` di `.env`.
+dengan nilai yang sama seperti di `.env`:
+
+- `CHANGE_ME_SRS_HOOKS_BASE_URL` -> `SRS_HOOKS_BASE_URL`
+- `CHANGE_ME_MEDIA_HOOK_SECRET` -> `MEDIA_HOOK_SECRET`
 
 Contoh cepat:
 
 ```bash
+grep SRS_HOOKS_BASE_URL .env
 grep MEDIA_HOOK_SECRET .env
 ```
 
@@ -305,6 +311,10 @@ Lalu reverse proxy:
 3. Issue SSL
 4. Force HTTPS
 
+Catatan:
+
+- callback SRS production pada checklist ini akan memakai `https://hooks.aweekday.site/...`, jadi domain ini wajib sudah punya reverse proxy dan SSL yang valid sebelum test OBS.
+
 ### 4. `stream.aweekday.site`
 
 Di aaPanel:
@@ -355,13 +365,21 @@ curl -I https://app.aweekday.site
 curl -I https://stream.aweekday.site
 ```
 
-### 5. Cek PM2
+### 5. Cek hooks publik
+
+```bash
+curl -I https://hooks.aweekday.site/
+```
+
+`401 Unauthorized` di endpoint hooks root adalah hasil yang normal.
+
+### 6. Cek PM2
 
 ```bash
 pm2 status
 ```
 
-### 6. Cek container
+### 7. Cek container
 
 ```bash
 docker compose -f infrastructure/compose/vps.yml ps
@@ -405,17 +423,12 @@ cd social-livestream-platform
 npm install --include=dev
 cp .env.vps.example .env
 nano .env
-nano infrastructure/compose/srs.vps.conf
-docker compose -f infrastructure/compose/vps.yml up -d
-npm run db:generate
-npm run build
-npx prisma db push --schema packages/db/prisma/schema.prisma
-npm run db:seed
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup
-mkdir -p /www/wwwroot/app.aweekday.site
-rsync -av --delete apps/web-app/dist/ /www/wwwroot/app.aweekday.site/
+bash deploy.sh
 ```
 
 Lalu lanjutkan website, reverse proxy, dan SSL dari aaPanel.
+
+Catatan tambahan saat test OBS:
+
+- gunakan room yang statusnya masih `PUBLISHED`
+- jika room sebelumnya sudah pernah live dan kemudian `ENDED`, buat room baru dari UI sebelum test ulang
